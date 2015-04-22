@@ -1,0 +1,40 @@
+group,subsystem,product,priority,reltco,satis,customiz
+1,Database,Oracle,Highest,0.9985,0.978,0
+1,Database,Oracle,Moderate,0.9997,0.933,0
+1,Database,Oracle,Lowest,1,0.927,0
+2,Database,IBM DB2,Highest,0.5739,0.782,0.196
+2,Database,IBM DB2,Moderate,0.5752,0.76,0.173
+2,Database,IBM DB2,Lowest,0.5754,0.768,0.159
+3,CMES,IBM MQ,Highest,0.9,0.9,0
+3,CMES,IBM MQ,Moderate,0.96,0.816,0.084
+3,CMES,IBM MQ,Lowest,1,0.754,0.146
+4,CMES,Oracle AQ,Highest,0.67,0.7,0.2
+4,CMES,Oracle AQ,Moderate,0.72,0.612,0.288
+4,CMES,Oracle AQ,Lowest,0.8,0.561,0.339
+5,CMES,MSMQ,Highest,0.48,0.6,0.3
+5,CMES,MSMQ,Moderate,0.55,0.469,0.431
+5,CMES,MSMQ,Lowest,0.6,0.421,0.479
+6,CMES,Jboss,Highest,0.32,0.833,0.067
+6,CMES,Jboss,Moderate,0.37,0.694,0.206
+6,CMES,Jboss,Lowest,0.4,0.614,0.286
+7,AM/OSM,IBM Maximo,Highest,1,0.9,0
+7,AM/OSM,IBM Maximo,Moderate,1,0.742,0.158
+7,AM/OSM,IBM Maximo,Lowest,1,0.75,0.15
+8,AM/OSM,IFS,Highest,0.5746,0.857,0.043
+8,AM/OSM,IFS,Moderate,0.5746,0.839,0.061
+8,AM/OSM,IFS,Lowest,0.5746,0.843,0.057
+9,AM/OSM,Infor,Highest,0.0684,0.871,0.029
+9,AM/OSM,Infor,Moderate,0.0684,0.828,0.072
+9,AM/OSM,Infor,Lowest,0.0684,0.833,0.067
+10,DPMS,IBM MQ/MB,Highest,1,0.759,0.141
+10,DPMS,IBM MQ/MB,Moderate,1,0.757,0.143
+10,DPMS,IBM MQ/MB,Lowest,1,0.744,0.156
+11,DPMS,Platform,Highest,0.76,0.823,0.077
+11,DPMS,Platform,Moderate,0.776,0.812,0.088
+11,DPMS,Platform,Lowest,0.8,0.795,0.105
+12,DPMS,RedHat JBPM,Highest,0.52,0.621,0.279
+12,DPMS,RedHat JBPM,Moderate,0.54,0.595,0.305
+12,DPMS,RedHat JBPM,Lowest,0.6,0.59,0.31
+13,DPMS,Kepler,Highest,0.2,0.552,0.348
+13,DPMS,Kepler,Moderate,0.2,0.541,0.359
+13,DPMS,Kepler,Lowest,0.2,0.538,0.362
