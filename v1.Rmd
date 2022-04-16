@@ -1,0 +1,196 @@
+---
+title: "Data Storyboard v1"
+output: 
+  flexdashboard::flex_dashboard:
+    theme: cosmo
+    vertical_layout: fill
+params:
+   fn: "D:/R/visDS/datastory-config.xlsx"
+---
+
+<style>.main-container { max-width: 1200px; margin-left: 0; margin-right: auto; .sidebar { overflow: auto; } }</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, error = FALSE, warning = FALSE, message = FALSE)
+
+# For info about running Python chunks by directly pointing to virtual environments, see:
+# https://www.lukaskawerau.com/rmarkdown-with-python-and-virtual-envs/
+```
+
+``````{r global-options, include=FALSE}
+# This section suppresses all code and errors so only charts, graphs, and tables are visible. 
+knitr::opts_chunk$set(fig.width=12, fig.height=8, fig.path='figures/', 
+                      echo=FALSE, warning=FALSE, message=FALSE, error=TRUE)
+
+########## LOAD PACKAGES: Add your extra packages to the list. Common profiling packages are listed already.
+   if (!require("pacman")) install.packages("pacman")
+   library(pacman)
+   pacman::p_load(flexdashboard, ggplot2, dplyr, tidyr, DT, knitr, lubridate, sparkline, flextable, DT, visNetwork,
+                  magrittr, purrr, tibble, data.table, stringr, stringi, htmltools, janitor, ggcorrplot, tidyr, xlsx,
+                  cowplot, vroom, dlookr, visdat, DataExplorer, inspectdf, reticulate, igraph, CINNA, rlist, rhandsontable)
+   
+#############################################################################################################################
+   
+# Load common regular expressions (e.g. formats of URLs and Emails)
+source("https://raw.githubusercontent.com/NicoleRadziwill/R-Functions/master/regexeR.R")
+```
+
+
+```{r load-clean}
+if (is.na(params$fn)) { fn <- "D:/R/visDS/datastory-config.xlsx" }
+
+xnodes <- xlsx::read.xlsx(params$fn, sheetName = "nodes")
+xedges <- xlsx::read.xlsx(params$fn, sheetName = "edges")
+
+
+# A valid node must have an id, group, and label (at minimum). Filter out only valid nodes:
+nodes <- xnodes %>% filter_at(c(1:3), all_vars(!is.na(.))) %>% as_tibble()
+
+# Assign the nodes SHAPES:
+nodes <- nodes %>% mutate(shape = 
+            case_when(group == "ARRIVAL" ~ "square",
+                      group == "INTEGRATION" ~ "triangle",
+                      group == "ANALYSIS" ~ "triangle",
+                      group == "DELIVERY" ~ "diamond",
+                      group == "VALUE" ~ "star",
+                      group == "Raw Data (Bronze)" ~ "database",
+                      group == "Clean Data (Silver)" ~ "database",
+                      group == "Data Products (Gold)" ~ "database")) %>% 
+                   mutate(value = 
+            case_when(shape == TRUE ~ 7))
+
+
+# Pull out node names by category only:
+nodecategories <- nodes %>% select(id, group, label=category, shape)
+
+# A valid edge must have from, to, and label (at minimum). Filter out only valid edges:
+edges <- xedges %>% filter_at(c(1:3), all_vars(!is.na(.))) %>% as_tibble()
+
+```
+
+
+
+Components
+===================================== 
+
+Column {.tabset}
+-------------------------------------
+
+```{r}
+# prepare graph
+g0 <- igraph::graph_from_data_frame(edges, directed = TRUE, vertices = nodes)
+
+# hub & authority scores
+nodes$placement  <- as.numeric(format(round(authority_score(g0)$vector*100), scientific=FALSE))
+nodes$nexus      <- as.numeric(format(round(hub_score(g0)$vector*100), scientific=FALSE))
+
+
+# get main component if graph is not fully connected
+if (!is_connected(g0)) {
+   components <- igraph::clusters(g0, mode="weak")
+   biggest_cluster_id <- which.max(components$csize)
+   vert_ids <- V(g0)[components$membership == biggest_cluster_id]
+   g <- igraph::induced_subgraph(g0, vert_ids)
+} else { g <- g0 }
+
+```
+
+
+### Nodes
+```{r}
+# If there are URLs detected in the infocard cells, change them to HTML:
+nodes <- nodes %>%  
+   mutate(infocard = ifelse(grepl(re.url, infocard), 
+                               paste0("<a href='", infocard, "'>LINK</a>"), infocard))
+
+DT::datatable(nodes, escape = FALSE, rownames = FALSE)
+```
+
+
+### Edges
+```{r}
+# If there are URLs detected in the infocard cells, change them to HTML:
+edges <- edges %>%  
+   mutate(infocard = ifelse(grepl(re.url, infocard), 
+                               paste0("<a href='", infocard, "'>LINK</a>"), infocard))
+
+DT::datatable(edges, escape = 5, rownames = FALSE)
+```
+
+
+### Centrality
+```{r}
+# compute centrality
+cent <- CINNA::calculate_centralities(g)
+clean_cent <- rlist::list.clean(cent)
+tcent <- as_tibble(t(as.data.frame(clean_cent))) %>% 
+   janitor::clean_names() %>% 
+   bind_cols(x0 = names(clean_cent), .)
+
+DT::datatable(purrr::modify_if(tcent, ~is.numeric(.), ~round(., 4)))
+
+```
+
+
+### Data Story (Complete)
+```{r}
+visNetwork(nodes, edges, height = "500px", width = "100%")  %>% 
+   visIgraphLayout() %>% 
+   visEdges(smooth = FALSE, arrows ="to") %>% 
+   visNodes(scaling = list(label = list(enabled = T))) %>% 
+   visGroups(groupname = "ARRIVAL", color = "#8FB2D0") %>%
+   visGroups(groupname = "INTEGRATION", color = "#DFD7C6") %>%
+   visGroups(groupname = "ANALYSIS", color = "#AF7688") %>%
+   visGroups(groupname = "DELIVERY", color = "#99CCAA") %>%
+   visGroups(groupname = "VALUE", color = "#77AB59") %>%
+   visGroups(groupname = "Raw Data (Bronze)", color = "#D6AF36") %>%
+   visGroups(groupname = "Clean Data (Silver)", color = "#D7D7D7") %>%
+   visGroups(groupname = "Data Products (Gold)", color = "#FEE101") %>%
+      visOptions(selectedBy = "group", 
+             highlightNearest = TRUE, 
+             nodesIdSelection = TRUE) %>%
+   visLegend() %>% visInteraction(hover = TRUE, navigationButtons = TRUE) %>% 
+   visExport(type = "jpeg", name = "data-story.jpg")
+```
+
+
+### System Nexus
+```{r}
+V(g0)$size <- nodes$nexus
+visIgraph(g0, idToLabel = TRUE) %>% 
+   visGroups(groupname = "ACQUISITION", color = "#AE728D") %>%
+   visGroups(groupname = "INTEGRATION", color = "#EFCC9C") %>%
+   visGroups(groupname = "ANALYSIS", color = "#FFF5D1") %>%
+   visGroups(groupname = "DELIVERY", color = "#6EA2BB") %>%
+   visGroups(groupname = "VALUE", color = "#C8D8B7") %>%
+   visGroups(groupname = "Data (Bronze/Raw)", color = "#D6AF36") %>%
+   visGroups(groupname = "Data (Silver/Clean)", color = "#D7D7D7") %>%
+   visGroups(groupname = "Data (Gold/Products)", color = "#FEE101") %>%
+   visLegend() %>% visInteraction(hover = TRUE, navigationButtons = TRUE) %>%
+   visExport(type = "jpeg", name = "hubs.jpg")
+```
+
+
+### Quality Control Placement
+```{r}
+V(g0)$size <- nodes$placement
+visIgraph(g0, idToLabel = TRUE) %>% 
+   visGroups(groupname = "ACQUISITION", color = "#AE728D") %>%
+   visGroups(groupname = "INTEGRATION", color = "#EFCC9C") %>%
+   visGroups(groupname = "ANALYSIS", color = "#FFF5D1") %>%
+   visGroups(groupname = "DELIVERY", color = "#6EA2BB") %>%
+   visGroups(groupname = "VALUE", color = "#C8D8B7") %>%
+   visGroups(groupname = "Data (Bronze/Raw)", color = "#D6AF36") %>%
+   visGroups(groupname = "Data (Silver/Clean)", color = "#D7D7D7") %>%
+   visGroups(groupname = "Data (Gold/Products)", color = "#FEE101") %>%
+   visLegend() %>% visInteraction(hover = TRUE, navigationButtons = TRUE) %>%
+   visExport(type = "jpeg", name = "authorities.jpg")
+```
+
+
+
+### Recommendations
+```{r}
+DT::datatable(nodes)
+```
+
